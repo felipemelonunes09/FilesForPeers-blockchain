@@ -1,2 +1,0 @@
-All serialization is divided in chunks of max 5MB
-# This is to prevent memory overflow and to better serialization across the network
