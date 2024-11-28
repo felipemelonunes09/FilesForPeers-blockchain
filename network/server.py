@@ -154,7 +154,7 @@ class Server():
                 # ---------------------------------------------------------
                 
                 if (len(Server.blocks) == 0):
-                    sock.sendall(json.dumps(add_block_message))
+                    sock.sendall(json.dumps(add_block_message).encode(globals.ENCODING))
                     data_response = sock.recv(1024)
                 else:
                     current_block:dict = Server.blocks[-1]
@@ -178,6 +178,7 @@ class Server():
                         response.set(Server.ClientResponse.OPERATION_CODE.REJECTED_INVALID_BLOCK_NUMBER, "Incoming block number dit not had a valid block number")
 
                     if (response.opt_code == Server.ClientResponse.OPERATION_CODE.WAITING_VALIDATION):
+                        sock.sendall(json.dumps(add_block_message).encode(globals.ENCODING))
                         data_response = sock.recv(1024)
                 
                 if data_response != None:
@@ -186,11 +187,12 @@ class Server():
                     response.opt_code = Server.ClientResponse.OPERATION_CODE.ACCEPTED_AND_FORWARD if result else Server.ClientResponse.OPERATION_CODE.REJECTED_DATA_LAYER_NOT_ACCEPTED
                     response.msg = data.get("message")
                 
+                Server.logger.info(f"ClientThreadConnection: response to {self.__address}: {response.serialize()}")
                 self.__conn.sendall(response.serialize())
                 
                 # If accepted send it to the Forward Block Enhenment
                 if response.opt_code == Server.ClientResponse.OPERATION_CODE.ACCEPTED_AND_FORWARD:
-                    Server.forward_block_enhencement.stage_block(request_data["block"])
+                    Server.forward_block_enhencement.stage_block(request_data)
                     
             # Incoming blockchain request or chunk request
             if request_type == Server.MessageType.BLOCKCHAIN_REQUEST.value:
