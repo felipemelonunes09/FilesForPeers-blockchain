@@ -28,7 +28,8 @@ class Server():
         SEND_BLOCK_CHAIN_CHUNK=1
         SEND_BLOCK_CHAIN=2
         ADD_BLOCK=3
-        CLOSE=4
+        SEND_LAST_BLOCK_CHAIN_CHUNK=4
+        CLOSE=-1
             
     class ChainManager():   
         def __init__(self, path: str) -> None:
@@ -75,6 +76,11 @@ class Server():
                     bin = f.readlines()
                     if (len(writeable_data.encode(globals.ENCODING)) != len(bin)):
                         f.write(writeable_data)
+                        
+        def get_last_chunk(self) -> dict | None:
+            if len(self.__chunks) == 0:
+                return None
+            return self.__chunks[-1]
                     
         def add_block(self, block: Block) -> bool:
             hash = Server.hash_generator(block)
@@ -219,6 +225,14 @@ class Server():
             elif msg_type == Server.MessageType.SEND_BLOCK_CHAIN.value:
                 chain = Server.chain_manager.get_chain()
                 connection.sendall(json.dumps({"action": msg_type, "result": chain , "message": "Sending chunk"}).encode(globals.ENCODING))
+            
+            elif msg_type == Server.MessageType.SEND_LAST_BLOCK_CHAIN_CHUNK.value:
+                chunk = Server.chain_manager.get_last_chunk()
+                if chunk:
+                    connection.sendall(json.dumps({"action": msg_type, "result": chunk , "message": "Sending chunk"}).encode(globals.ENCODING))
+                else:
+                    connection.sendall(json.dumps({"action": msg_type, "result": False, "message": "Error chunk may not exist" }).encode(globals.ENCODING))
+            
             
             elif msg_type == Server.MessageType.ADD_BLOCK.value:
                 Server.logger.info(f"Starting process for adding new block from {address} --data: {msg_data}")

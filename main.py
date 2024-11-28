@@ -1,7 +1,7 @@
 import logging
 import multiprocessing
 from data.server import Server as DataLayerServer
-from network import Server as NetworkLayerServer
+from network.server import Server as NetworkLayerServer
 
 def start_data_layer():
     server = DataLayerServer()
@@ -11,9 +11,11 @@ def start_network_layer():
     server = NetworkLayerServer()
     server.start()
     
-
-
 if __name__ == "__main__":
-    process = multiprocessing.Process(target=start_data_layer)
-    process.start()
+    process_data = multiprocessing.Process(target=start_data_layer)
+    process_data.start()
+    
+    process_network = multiprocessing.Process(target=start_network_layer)
+    process_network.start()
+    
         
