@@ -208,7 +208,7 @@ class Server():
     configuration: dict[str, object]    = dict()
     user_hashtable: dict[str, dict]     = dict()
     blocks: list[dict[str, dict]]       = dict()
-    data_layer_adress: tuple[int, str]  = tuple()
+    data_layer_adress: tuple[str, int]  = tuple()
     forward_block_enhencement           = FBE()
     
     def __init__(self) -> None:
@@ -219,7 +219,7 @@ class Server():
         Server.logger.addHandler(handler)
         self.logger.info("NetworkLayer initialization")
         self.__read_config()
-        Server.data_layer_adress = (Server.configuration["udht"]["manager"]["ip"], Server.configuration["udht"]["manager"]["ip"])
+        Server.data_layer_adress = (Server.configuration["udht"]["manager"]["ip"], Server.configuration["udht"]["manager"]["port"])
         
     def start(self) -> None:
         self.logger.info("NetworkLayer started")
