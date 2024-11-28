@@ -65,6 +65,7 @@ class Server():
                         "request_type": Server.MessageType.INCOMING_BLOCK,
                         "request_data": block
                     })
+                    
             sock.close()
     
     class MessageType(Enum):
@@ -205,8 +206,7 @@ class Server():
                     
             # Incoming blockchain request or chunk request
             if request_type == Server.MessageType.BLOCKCHAIN_REQUEST.value:
-                request_data = sock.sendall({ "message_type": 2})
-                sock.sendall(json.dumps(request_data).encode(globals.ENCODING))
+                sock.sendall(json.dumps({ "message_type": 2}).encode(globals.ENCODING))
                 bin = sock.recv(1024)
                 data = json.loads(bin.decode(globals.ENCODING))
                 response = Server.ClientResponse()
