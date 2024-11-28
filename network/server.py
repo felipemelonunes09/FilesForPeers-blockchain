@@ -140,7 +140,7 @@ class Server():
             data:dict = json.loads(arr_bytes.decode(globals.ENCODING))  
             Server.logger.info(f"ClientThreadConnection:{self.__address}: incoming request --data: {data}")
             request_type = data.get("request_type")
-            sock = socket.socket(socket.AF_INET, socket.SOCK_RAW)
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect(Server.data_layer_adress)
             
             # Incoming block
