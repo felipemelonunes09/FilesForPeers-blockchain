@@ -1,5 +1,6 @@
 
 from concurrent.futures import ThreadPoolExecutor
+from typing import Generator
 from enum import Enum
 import json
 import logging
@@ -8,11 +9,28 @@ import pickle
 import queue
 import socket
 import threading
-from typing import Generator
 import yaml
 import globals
 
 class Server():
+    class MessageType(Enum):
+        INCOMING_BLOCK=1
+        BLOCKCHAIN_REQUEST=2
+        
+    class ClientResponse():
+        class OPERATION_CODE(Enum):
+            WAITING_VALIDATION                  = 0
+            ACCEPTED_AND_FORWARD                = 1 
+            REJECTED_INVALID_PUBLIC_KEY         = -1 # NI
+            REJECTED_INVALID_INVALID_SEQUENCE   = -2 # NI
+            REJECTED_INVALID_BLOCK_HASH         = -3 # NI
+            REJECTED_INVALID_CHAIN_CONNECTION   = -4
+            REJECTED_INVALID_BLOCK_NUMBER       = -5
+            REJECTED_INVALID_VALIDATOR          = -6 # NI
+            REJECTED_DATA_LAYER_NOT_ACCEPTED    = -7
+            REJECTED_INVALID_FBE_HEADER         = -8 # NI
+            SENDING_SERIALIZED_BLOCKAIN         = 2
+            
     class FBE():
         def __init__(self) -> None:
             self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -63,33 +81,18 @@ class Server():
                         "request_type": Server.MessageType.INCOMING_BLOCK,
                         "request_data": block
                     })
-    
-    class MessageType(Enum):
-        INCOMING_BLOCK=1
-        BLOCKCHAIN_REQUEST=2
-        
-    class ClientResponse():
-        class OPERATION_CODE(Enum):
-            WAITING_VALIDATION                  = 0
-            ACCEPTED_AND_FORWARD                = 1 
-            REJECTED_INVALID_PUBLIC_KEY         = -1 # NI
-            REJECTED_INVALID_INVALID_SEQUENCE   = -2 # NI
-            REJECTED_INVALID_BLOCK_HASH         = -3 # NI
-            REJECTED_INVALID_CHAIN_CONNECTION   = -4
-            REJECTED_INVALID_BLOCK_NUMBER       = -5
-            REJECTED_INVALID_VALIDATOR          = -6 # NI
-            REJECTED_DATA_LAYER_NOT_ACCEPTED    = -7
-            REJECTED_INVALID_FBE_HEADER         = -8 # NI
-            
+                    
         def __init__(self, opt_code: OPERATION_CODE=None, msg: str=None) -> None:
             self.set(opt_code, msg)
             
-        def set(self, opt_code: OPERATION_CODE, msg: str) -> None:
+        def set(self, opt_code: OPERATION_CODE, msg: str, payload: object = None) -> None:
             self.opt_code = opt_code
             self.msg = msg
+            self.payload = payload
+        
             
         def serialize(self) -> bytes:
-            return json.dumps({ "opt_code": self.opt_code, "msg": self.msg }).encode(globals.ENCODING)
+            return json.dumps({ "opt_code": self.opt_code, "msg": self.msg, "payload": self.payload }).encode(globals.ENCODING)
         
     class RequestDataThread(threading.Thread):
         def __init__(self) -> None:
@@ -188,7 +191,16 @@ class Server():
                     
             # Incoming blockchain request or chunk request
             if request_type == Server.MessageType.BLOCKCHAIN_REQUEST.value:
-                pass
+                request_data = sock.sendall({ "message_type": 2})
+                sock.sendall(json.dumps(request_data).encode(globals.ENCODING))
+                bin = sock.recv(1024)
+                data = json.loads(bin.decode(globals.ENCODING))
+                response = Server.ClientResponse()
+                response.set(Server.ClientResponse.OPERATION_CODE.SENDING_SERIALIZED_BLOCKAIN, "Sending blockchain", payload=data)
+                self.__conn.sendall(response.serialize())
+                
+            sock.close()
+            self.__conn.close()
     
     logger: logging.Logger              = logging.getLogger(__name__)
     configuration: dict[str, object]    = dict()
