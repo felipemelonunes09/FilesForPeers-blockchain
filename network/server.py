@@ -122,10 +122,10 @@ class Server():
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect(self.__data_address)
                 sock.sendall(self.__encoded_message_data)
-                bin = sock.recv(1024)
+                bin = sock.recv(4028)
                 data = bin.decode(globals.ENCODING)
+                Server.logger.info(f"{self}: Received decoded data chunk --data: {data}")
                 data: dict = json.loads(data)
-                Server.logger.info(f"{self}: Received blockchain chunk --data: {data}")
                 Server.blocks = data["result"]["blocks"]
             
     class ClientThreadConnection(threading.Thread):
@@ -182,8 +182,11 @@ class Server():
                         data_response = sock.recv(1024)
                 
                 if data_response != None:
-                    data: dict = json.loads(data_response.decode(globals.ENCODING))
+                    decoded_data = data_response.decode(globals.ENCODING)
+                    Server.logger.info(f"ClientThreadConnection: data-layer response --data: {decoded_data}")
+                    data: dict = json.loads(decoded_data)
                     result = data.get("result")
+                    hash = data.get("hash")
                     response.opt_code = Server.ClientResponse.OPERATION_CODE.ACCEPTED_AND_FORWARD if result else Server.ClientResponse.OPERATION_CODE.REJECTED_DATA_LAYER_NOT_ACCEPTED
                     response.msg = data.get("message")
                 
@@ -193,6 +196,8 @@ class Server():
                 # If accepted send it to the Forward Block Enhenment
                 if response.opt_code == Server.ClientResponse.OPERATION_CODE.ACCEPTED_AND_FORWARD:
                     Server.forward_block_enhencement.stage_block(request_data)
+                    request_data["__header"]["blockHash"] = hash
+                    Server.blocks.append(request_data)
                     
             # Incoming blockchain request or chunk request
             if request_type == Server.MessageType.BLOCKCHAIN_REQUEST.value:
@@ -222,7 +227,7 @@ class Server():
         Server.logger.addHandler(handler)
         self.logger.info("NetworkLayer initialization")
         self.__read_config()
-        Server.data_layer_adress = (Server.configuration["udht"]["manager"]["ip"], Server.configuration["udht"]["manager"]["port"])
+        Server.data_layer_adress = (Server.configuration["blockchain"]["data"]["ip"], Server.configuration["blockchain"]["data"]["port"])
         
     def start(self) -> None:
         self.logger.info("NetworkLayer started")
