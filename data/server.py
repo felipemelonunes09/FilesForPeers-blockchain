@@ -191,16 +191,21 @@ class Server():
         self.run()
     
     def run(self) -> None:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        address = (self.configuration["blockchain"]['data']['ip'], self.configuration["blockchain"]['data']['port'])
-        sock.bind(address)
-        sock.listen(5)
-        Server.logger.info(f"Server on listening on {address}")
-        while True:
-            conn, adrr = sock.accept()
-            Server.logger.info(f"Accepted connection with {address} stated client connection thread")
-            thread = Server.ClientConnectionThread(conn, adrr)
-            thread.start()
+        address = (
+            self.configuration["blockchain"]["data"]["ip"],
+            self.configuration["blockchain"]["data"]["port"],
+        )
+        
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.bind(address)
+            sock.listen(5)
+            Server.logger.info(f"Server is listening on {address}")
+            
+            while True:
+                conn, addr = sock.accept()
+                Server.logger.info(f"Accepted connection with {addr}, starting client connection thread")
+                thread = Server.ClientConnectionThread(conn, addr)
+                thread.start()
         
     def __read_config(self) -> None:
         with open(globals.CONFIG_FILE, 'r') as file:
