@@ -13,24 +13,6 @@ import yaml
 import globals
 
 class Server():
-    class MessageType(Enum):
-        INCOMING_BLOCK=1
-        BLOCKCHAIN_REQUEST=2
-        
-    class ClientResponse():
-        class OPERATION_CODE(Enum):
-            WAITING_VALIDATION                  = 0
-            ACCEPTED_AND_FORWARD                = 1 
-            REJECTED_INVALID_PUBLIC_KEY         = -1 # NI
-            REJECTED_INVALID_INVALID_SEQUENCE   = -2 # NI
-            REJECTED_INVALID_BLOCK_HASH         = -3 # NI
-            REJECTED_INVALID_CHAIN_CONNECTION   = -4
-            REJECTED_INVALID_BLOCK_NUMBER       = -5
-            REJECTED_INVALID_VALIDATOR          = -6 # NI
-            REJECTED_DATA_LAYER_NOT_ACCEPTED    = -7
-            REJECTED_INVALID_FBE_HEADER         = -8 # NI
-            SENDING_SERIALIZED_BLOCKAIN         = 2
-            
     class FBE():
         def __init__(self) -> None:
             self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -40,7 +22,7 @@ class Server():
         def stage_size(self) -> int:
             return len(self.__queue)
         
-        def get_workeable_range(self) -> Generator[list]:
+        def get_workeable_range(self) -> Generator:
             hashtable_keys = Server.user_hashtable.keys()
             hashtable_len = len(Server.user_hashtable)
             chunks = math.ceil(hashtable_len/self.__range)
@@ -81,7 +63,26 @@ class Server():
                         "request_type": Server.MessageType.INCOMING_BLOCK,
                         "request_data": block
                     })
-                    
+    
+    class MessageType(Enum):
+        INCOMING_BLOCK=1
+        BLOCKCHAIN_REQUEST=2
+        
+    class ClientResponse():
+        class OPERATION_CODE(Enum):
+            WAITING_VALIDATION                  = 0
+            ACCEPTED_AND_FORWARD                = 1 
+            REJECTED_INVALID_PUBLIC_KEY         = -1 # NI
+            REJECTED_INVALID_INVALID_SEQUENCE   = -2 # NI
+            REJECTED_INVALID_BLOCK_HASH         = -3 # NI
+            REJECTED_INVALID_CHAIN_CONNECTION   = -4
+            REJECTED_INVALID_BLOCK_NUMBER       = -5
+            REJECTED_INVALID_VALIDATOR          = -6 # NI
+            REJECTED_DATA_LAYER_NOT_ACCEPTED    = -7
+            REJECTED_INVALID_FBE_HEADER         = -8 # NI
+            SENDING_SERIALIZED_BLOCKAIN         = 2
+            
+            
         def __init__(self, opt_code: OPERATION_CODE=None, msg: str=None) -> None:
             self.set(opt_code, msg)
             
@@ -129,7 +130,7 @@ class Server():
             sock.close()
             
     class ClientThreadConnection(threading.Thread):
-        def __init__(self, conn: socket.socket, address: socket._RetAddress) -> None:
+        def __init__(self, conn: socket.socket, address: tuple[str, int]) -> None:
             self.__conn = conn
             self.__address = address
             super().__init__()
@@ -231,7 +232,8 @@ class Server():
     
     def run(self) -> None:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind()
+        address = (Server.configuration["blockchain"]["network"]["ip"], Server.configuration["blockchain"]["network"]["port"])
+        sock.bind(address)
         sock.listen(50) # pool the no maximo 50 conexoes ativas 
         
         while True:
