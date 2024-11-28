@@ -137,7 +137,8 @@ class Server():
         
         def run(self) -> None:
             arr_bytes = self.__conn.recv(1024)          
-            data:dict = json.dumps(arr_bytes.decode(globals.ENCODING))  
+            data:dict = json.loads(arr_bytes.decode(globals.ENCODING))  
+            Server.logger.info(f"ClientThreadConnection:{self.__address}: incoming request --data: {data}")
             request_type = data.get("request_type")
             sock = socket.socket(socket.AF_INET, socket.SOCK_RAW)
             sock.connect(Server.data_layer_adress)
