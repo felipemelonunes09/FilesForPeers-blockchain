@@ -147,7 +147,7 @@ class Server():
             if request_type == Server.MessageType.INCOMING_BLOCK.value:
                 response = Server.ClientResponse(opt_code=Server.ClientResponse.OPERATION_CODE.WAITING_VALIDATION)
                 request_data = data.get("request_data")
-                block_header: dict = request_data["block"]["header"]
+                block_header: dict = request_data["__header"]
                 add_block_message = { "message_type": 3, "message_data": request_data }
                 data_response: bytes = None
                 
