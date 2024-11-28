@@ -119,15 +119,14 @@ class Server():
             Server.user_hashtable = hashtable
         
         def __request_blockchain_chunk(self) -> None:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.connect(self.__data_address)
-            sock.sendall(self.__encoded_message_data)
-            bin = sock.recv(1024)
-            data = bin.decode(globals.ENCODING)
-            data:dict = json.loads(data)
-            Server.logger.info(f"{self}: Received blockchain chunk --data: {data}")
-            Server.blocks = data["result"]["blocks"]
-            sock.close()
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.connect(self.__data_address)
+                sock.sendall(self.__encoded_message_data)
+                bin = sock.recv(1024)
+                data = bin.decode(globals.ENCODING)
+                data: dict = json.loads(data)
+                Server.logger.info(f"{self}: Received blockchain chunk --data: {data}")
+                Server.blocks = data["result"]["blocks"]
             
     class ClientThreadConnection(threading.Thread):
         def __init__(self, conn: socket.socket, address: tuple[str, int]) -> None:
