@@ -159,16 +159,17 @@ class Server():
                     data_response = sock.recv(1024)
                 else:
                     current_block:dict = Server.blocks[-1]
+                    Server.logger.info(f"ClientThreadConnection: resolver: there are loaded blocks in the chunk --lastBlock: {current_block}")
                     
                     ## verify chain connection
-                    current_hash = current_block.get("blockHash")
+                    current_hash = current_block.get("__header")["blockHash"]
                     incoming_block_hash = block_header.get("lastHash")
                     
                     if (current_hash != incoming_block_hash):
                         response.set(Server.ClientResponse.OPERATION_CODE.REJECTED_INVALID_CHAIN_CONNECTION, "Incoming block hash dit not connect with block chain")
                      
                     ## verify block number
-                    current_block_number = current_block.get("blockNumber")
+                    current_block_number = current_block.get("__header")["blockNumber"]
                     incoming_block_number = block_header.get("blockNumber")
                     
                     # should verify FBE header
@@ -232,15 +233,21 @@ class Server():
         thread.join()
     
     def run(self) -> None:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        address = (Server.configuration["blockchain"]["network"]["ip"], Server.configuration["blockchain"]["network"]["port"])
-        sock.bind(address)
-        sock.listen(50) # pool the no maximo 50 conexoes ativas 
-        
-        while True:
-            conn, addr = sock.accept()
-            thread = Server.ClientThreadConnection(conn, addr)
-            thread.start()
+        address = (
+            Server.configuration["blockchain"]["network"]["ip"],
+            Server.configuration["blockchain"]["network"]["port"],
+        )
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.bind(address)
+            sock.listen(50)  # Pool de no máximo 50 conexões ativas
+            Server.logger.info(f"Network server is listening on {address}")
+            
+            while True:
+                conn, addr = sock.accept()
+                Server.logger.info(f"Accepted connection from {addr}, starting client connection thread")
+                thread = Server.ClientThreadConnection(conn, addr)
+                thread.start()
     
     def __read_config(self) -> None:
         with open(globals.CONFIG_FILE, 'r') as file:
