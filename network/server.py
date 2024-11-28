@@ -93,7 +93,7 @@ class Server():
         
             
         def serialize(self) -> bytes:
-            return json.dumps({ "opt_code": self.opt_code, "msg": self.msg, "payload": self.payload }).encode(globals.ENCODING)
+            return json.dumps({ "opt_code": self.opt_code.value, "msg": self.msg, "payload": self.payload }).encode(globals.ENCODING)
         
     class RequestDataThread(threading.Thread):
         def __init__(self) -> None:
