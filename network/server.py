@@ -126,7 +126,7 @@ class Server():
             data = bin.decode(globals.ENCODING)
             data:dict = json.loads(data)
             Server.logger.info(f"{self}: Received blockchain chunk --data: {data}")
-            Server.blocks = data.get("blocks", [])
+            Server.blocks = data["result"]["blocks"]
             sock.close()
             
     class ClientThreadConnection(threading.Thread):
