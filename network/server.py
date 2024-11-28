@@ -15,7 +15,6 @@ import globals
 class Server():
     class FBE():
         def __init__(self) -> None:
-            self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.__queue: queue.Queue[dict] = queue.Queue()
             self.__range: int = 50 # peers per thread
             
@@ -23,7 +22,7 @@ class Server():
             return len(self.__queue)
         
         def get_workeable_range(self) -> Generator:
-            hashtable_keys = Server.user_hashtable.keys()
+            hashtable_keys = list(Server.user_hashtable.keys())
             hashtable_len = len(Server.user_hashtable)
             chunks = math.ceil(hashtable_len/self.__range)
             
@@ -40,13 +39,11 @@ class Server():
             self.__queue.put(block)
             
         def start_pool(self) -> None:
-            
-            self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            with ThreadPoolExecutor(max_workers=5) as executor:
-                workable_keys = self.get_workeable_range()
-                executor.submit(self.__emit_block, workable_keys)
-            self.__sock.close()
-        
+            Server.logger.info("FBE: starting thread pool executor")
+            for keys_set in self.get_workeable_range():
+                thread = threading.Thread(target=self.__emit_block, args=(keys_set,))
+                thread.start()
+                
         def __add_header(self) -> None: # NI
             ...
         
@@ -54,15 +51,21 @@ class Server():
             ...
         
         def __emit_block(self, keys: list[str]) -> None: 
+            Server.logger.info(f"FBE: Starting block emission with {len(keys)} entries --queue-empty: {self.__queue.empty()}")
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             while not self.__queue.empty():
-                block = self.__queue.get()
+                block = self.__queue.get() 
+                Server.logger.info(f"FBE: Next emitted block --data: {block}")
                 for key in keys:
+                    Server.logger.info(f"FBE: Next key to be sent --data: {key}")
                     peer = Server.user_hashtable.get(key)
-                    self.__sock.connect(peer["ip"], int(peer["port"]))
-                    self.__sock.sendall({
+                    sock.connect((peer["ip"], int(peer["port"])))
+                    Server.logger.info(f"Sending request of incoming block to {peer["ip"]}")
+                    sock.sendall({
                         "request_type": Server.MessageType.INCOMING_BLOCK,
                         "request_data": block
                     })
+            sock.close()
     
     class MessageType(Enum):
         INCOMING_BLOCK=1
@@ -198,6 +201,7 @@ class Server():
                     Server.forward_block_enhencement.stage_block(request_data)
                     request_data["__header"]["blockHash"] = hash
                     Server.blocks.append(request_data)
+                    Server.forward_block_enhencement.start_pool()
                     
             # Incoming blockchain request or chunk request
             if request_type == Server.MessageType.BLOCKCHAIN_REQUEST.value:
