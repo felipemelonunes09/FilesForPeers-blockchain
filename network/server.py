@@ -1,16 +1,68 @@
 
+from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 import json
 import logging
+import math
 import pickle
+import queue
 import socket
 import threading
+from typing import Generator
 import yaml
 import globals
 
 class Server():
     class FBE():
-        pass
+        def __init__(self) -> None:
+            self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.__queue: queue.Queue[dict] = queue.Queue()
+            self.__range: int = 50 # peers per thread
+            
+        def stage_size(self) -> int:
+            return len(self.__queue)
+        
+        def get_workeable_range(self) -> Generator[list]:
+            hashtable_keys = Server.user_hashtable.keys()
+            hashtable_len = len(Server.user_hashtable)
+            chunks = math.ceil(hashtable_len/self.__range)
+            
+            for i in range(0, chunks):
+                start_index = i*self.__range
+                end_index = (i*self.__range) + self.__range
+                
+                if (end_index < hashtable_len):
+                    yield hashtable_keys[start_index: end_index]
+                else:
+                    yield hashtable_keys[start_index:]
+
+        def stage_block(self, block: dict) -> None:
+            self.__queue.put(block)
+            
+        def start_pool(self) -> None:
+            
+            self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                workable_keys = self.get_workeable_range()
+                executor.submit(self.__emit_block, workable_keys)
+            self.__sock.close()
+        
+        def __add_header(self) -> None: # NI
+            ...
+        
+        def __sign_header(self) -> None: # NI
+            ...
+        
+        def __emit_block(self, keys: list[str]) -> None: 
+            while not self.__queue.empty():
+                block = self.__queue.get()
+                for key in keys:
+                    peer = Server.user_hashtable.get(key)
+                    self.__sock.connect(peer["ip"], int(peer["port"]))
+                    self.__sock.sendall({
+                        "request_type": Server.MessageType.INCOMING_BLOCK,
+                        "request_data": block
+                    })
     
     class MessageType(Enum):
         INCOMING_BLOCK=1
@@ -19,7 +71,7 @@ class Server():
     class ClientResponse():
         class OPERATION_CODE(Enum):
             WAITING_VALIDATION                  = 0
-            ACCEPTED_AND_FORWARD                =  1 
+            ACCEPTED_AND_FORWARD                = 1 
             REJECTED_INVALID_PUBLIC_KEY         = -1 # NI
             REJECTED_INVALID_INVALID_SEQUENCE   = -2 # NI
             REJECTED_INVALID_BLOCK_HASH         = -3 # NI
@@ -130,6 +182,9 @@ class Server():
                     response.msg = data.get("message")
                 
                 self.__conn.sendall(response.serialize())
+                
+                # If accepted send it to the Forward Block Enhenment
+                Server.forward_block_enhencement.stage_block(request_data["block"])
                     
             # Incoming blockchain request or chunk request
             if request_type == Server.MessageType.BLOCKCHAIN_REQUEST.value:
@@ -140,6 +195,7 @@ class Server():
     user_hashtable: dict[str, dict]     = dict()
     blocks: list[dict[str, dict]]       = dict()
     data_layer_adress: tuple[int, str]  = tuple()
+    forward_block_enhencement           = FBE()
     
     def __init__(self) -> None:
         Server.logger.setLevel(logging.INFO)
