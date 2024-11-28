@@ -189,7 +189,8 @@ class Server():
                 self.__conn.sendall(response.serialize())
                 
                 # If accepted send it to the Forward Block Enhenment
-                Server.forward_block_enhencement.stage_block(request_data["block"])
+                if response.opt_code == Server.ClientResponse.OPERATION_CODE.ACCEPTED_AND_FORWARD:
+                    Server.forward_block_enhencement.stage_block(request_data["block"])
                     
             # Incoming blockchain request or chunk request
             if request_type == Server.MessageType.BLOCKCHAIN_REQUEST.value:
