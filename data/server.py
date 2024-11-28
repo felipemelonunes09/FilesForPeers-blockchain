@@ -40,6 +40,12 @@ class Server():
                 
         def get_chain(self) -> list[Block]:
             return self.__chain
+        
+        def get_serialized_chain(self) -> list[dict]:
+            chain = list()
+            for block in self.__chain:
+                chain.append(block.to_dict())
+            return chain
 
         def descerialize_chain(self) -> None:
             self.__read_dir()
@@ -57,7 +63,7 @@ class Server():
                     block_payload = Block.Payload(block.get("payload"))
                     block_obj = Block(header=block_header, payload=block_payload)
                     block_obj.set_block_hash(block.get("__header").get("blockHash"))
-                    self.__chain.append(block_obj.to_dict())    
+                    self.__chain.append(block_obj)    
                     
             if len(self.__chunks) == 0:
                 self.__chunks.append({
@@ -82,13 +88,13 @@ class Server():
                 return None
             return self.__chunks[-1]
                     
-        def add_block(self, block: Block) -> bool:
+        def add_block(self, block: Block) -> tuple[bool, str | None]:
             hash = Server.hash_generator(block)
             block.set_block_hash(hash)
             Server.logger.info(f"ChainManager: Hash new block --result: {hash}")
             last_block = Server.chain_manager.get_last_block()
             if last_block == None:
-                self.__chain.append(block.to_dict())
+                self.__chain.append(block)
                 self.__chunks[-1].get("blocks").append(block.to_dict())
                 Server.logger.info(f"ChainManager: appended on the end of the last chunk --result: {hash}")
             else:
@@ -101,12 +107,13 @@ class Server():
                             "blocks": [],
                             "chunkFilename": f"generated-chunk-{len(self.__chunks)}-{datetime.datetime.now()}.json"
                         })
-                    self.__chain.append(block.to_dict())
+                    self.__chain.append(block)
                     self.__chunks[-1].get("blocks").append(block.to_dict())
                 else:
-                    return False         
+                    return False, None         
             self.serialize_chain()
-            return True
+            Server.logger.info("ChainManager: Finished serializing chain")
+            return True, hash
         
         def get_chunk(self, chunkName) -> dict[str, object] | None:
             for chunk in self.__chunks:
@@ -228,7 +235,8 @@ class Server():
                     connection.sendall(json.dumps({"action": msg_type, "result": False, "message": "Error chunk may not exist" }).encode(globals.ENCODING))
             
             elif msg_type == Server.MessageType.SEND_BLOCK_CHAIN.value:
-                chain = Server.chain_manager.get_chain()
+                chain = Server.chain_manager.get_serialized_chain()
+                
                 connection.sendall(json.dumps({"action": msg_type, "result": chain , "message": "Sending chunk"}).encode(globals.ENCODING))
             
             elif msg_type == Server.MessageType.SEND_LAST_BLOCK_CHAIN_CHUNK.value:
@@ -244,10 +252,10 @@ class Server():
                 header = Block.Header(msg_data.get("__header"))
                 payload = Block.Payload(msg_data.get("payload"))
                 Server.logger.info(f"New-block --header: {header} --payload: {payload}")
-                result = Server.chain_manager.add_block(Block(header=header, payload=payload))
+                result, hash = Server.chain_manager.add_block(Block(header=header, payload=payload))
                 Server.logger.info(f"Block added-process --result: {result}")
                 if result:
-                    connection.sendall(json.dumps({"action": msg_type, "result": result, "message": "Block Accepted" }).encode(globals.ENCODING))
+                    connection.sendall(json.dumps({"action": msg_type, "result": result, "message": "Block Accepted", "hash": hash}).encode(globals.ENCODING))
                 else:
                     connection.sendall(json.dumps({"action": msg_type, "result": result, "message": "Block Rejected"}).encode(globals.ENCODING))
                 
