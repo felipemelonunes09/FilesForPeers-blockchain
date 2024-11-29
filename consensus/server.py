@@ -1,4 +1,5 @@
 
+from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
 
 import json
@@ -91,6 +92,17 @@ class Server():
                             else:
                                 Server.queue.put((message_type, message_data, self.__address, self.__conn))
                 self.__conn.close()
+                
+        class ThreadPool(threading.Thread):
+            def __init__(self, group: None = None, target: Callable[..., object] | None = None, name: str | None = None, args: logging.Iterable[json.Any] = ..., kwargs: logging.Mapping[str, json.Any] | None = None, *, daemon: bool | None = None) -> None:
+                super().__init__(group, target, name, args, kwargs, daemon=daemon)
+            
+            def run(self) -> None:
+                with ThreadPoolExecutor(max_workers=3) as executor:
+                    while True:
+                        msg_type, msg_data, address, conn = Server.queue.get()
+                        executor.submit(Server.consume_message, msg_type, msg_data, address, conn)
+                    
     
         def __init__(self) -> None:
             Server.logger.setLevel(logging.INFO)
