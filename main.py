@@ -1,8 +1,9 @@
+import time
 import logging
 import multiprocessing
 from data.server import Server as DataLayerServer
 from network.server import Server as NetworkLayerServer
-from consensus.Server import Server as ConsensusServer
+from consensus.server import Server as ConsensusServer
 
 def start_data_layer():
     server = DataLayerServer()
@@ -23,7 +24,10 @@ if __name__ == "__main__":
     process_network = multiprocessing.Process(target=start_network_layer)
     process_network.start()
     
+    time.sleep(2)
+    
     process_consensus = multiprocessing.Process(target=start_consesus_layer)
     process_consensus.start()
+
     
         
