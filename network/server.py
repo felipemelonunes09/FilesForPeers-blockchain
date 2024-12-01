@@ -59,12 +59,12 @@ class Server():
                 for key in keys:
                     Server.logger.info(f"FBE: Next key to be sent --data: {key}")
                     peer = Server.user_hashtable.get(key)
-                    sock.connect((peer["ip"], int(peer["port"])))
+                    sock.connect((peer["ip"], int(peer["ports"]["networkLayer"])))
                     Server.logger.info(f"Sending request of incoming block to {peer["ip"]}")
-                    sock.sendall({
+                    sock.sendall(json.dumps({
                         "request_type": Server.MessageType.INCOMING_BLOCK,
                         "request_data": block
-                    })
+                    }).encode(globals.ENCODING))
                     
             sock.close()
     
@@ -116,7 +116,7 @@ class Server():
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect(self.__udht_address)
             sock.sendall(self.__encoded_message_udht)
-            bin = sock.recv(1024)
+            bin = sock.recv(4024)
             Server.logger.info(f"{self}: Received user hashtable --data: {bin}")
             hashtable = pickle.loads(bin)
             sock.close()

@@ -1,9 +1,9 @@
 from concurrent.futures import ThreadPoolExecutor
-
-import datetime
+from core.chain.block import Block
 from enum import Enum
 from queue import Queue
 
+import datetime
 import hashlib
 import os
 import socket
@@ -13,13 +13,11 @@ import globals
 import logging
 import threading 
 
-from data.block import Block
 
 class Server():
-    
     class BlockHashSHA256Generator():
         def __call__(self, block: Block) -> str:
-            block = block.to_dict()
+            block = block.serialize()
             encoded_block = json.dumps(block).encode(globals.ENCODING)
             hash_block = hashlib.sha256(encoded_block)
             return hash_block.hexdigest()
@@ -44,7 +42,7 @@ class Server():
         def get_serialized_chain(self) -> list[dict]:
             chain = list()
             for block in self.__chain:
-                chain.append(block.to_dict())
+                chain.append(block.serialize())
             return chain
 
         def descerialize_chain(self) -> None:
@@ -95,11 +93,11 @@ class Server():
             last_block = Server.chain_manager.get_last_block()
             if last_block == None:
                 self.__chain.append(block)
-                self.__chunks[-1].get("blocks").append(block.to_dict())
+                self.__chunks[-1].get("blocks").append(block.serialize())
                 Server.logger.info(f"ChainManager: appended on the end of the last chunk --result: {hash}")
             else:
                 last_block_hash = last_block.get_header().get("blockHash")
-                Server.logger.info(f"ChainManager: Last block info: {last_block.to_dict()}")
+                Server.logger.info(f"ChainManager: Last block info: {last_block.serialize()}")
                 Server.logger.info(f"ChainManager: Hash verification={hash==last_block_hash}\n{hash}\n{last_block_hash}")
                 if block.get_last_hash() == last_block_hash:
                     if (len(json.dumps(self.__chunks[-1]).encode(globals.ENCODING)) > 5 * 1024 * 1024):
@@ -108,7 +106,7 @@ class Server():
                             "chunkFilename": f"generated-chunk-{len(self.__chunks)}-{datetime.datetime.now()}.json"
                         })
                     self.__chain.append(block)
-                    self.__chunks[-1].get("blocks").append(block.to_dict())
+                    self.__chunks[-1].get("blocks").append(block.serialize())
                 else:
                     return False, None         
             self.serialize_chain()
