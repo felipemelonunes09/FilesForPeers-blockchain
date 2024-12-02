@@ -146,7 +146,8 @@ class Server():
             Server.logger.info(f"Attemping socket connection with --address: {self.__data_address}")
             sock.connect(self.__data_address)
             sock.sendall(self.__encoded_message_data)
-            bin = sock.recv(1024)
+            bin = sock.recv(4024)
+            Server.logger.info(f"Received from blockchain-chunk request: {bin}")
             data = json.loads(bin.decode(globals.ENCODING))
             Server.blocks = data['result']['blocks']
             return super().run()
