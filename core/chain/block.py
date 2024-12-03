@@ -11,8 +11,7 @@ class Block(ISerializable):
                 self.validatorVerificationSequence      :str             = data["validatorVerificationSequence"]
                 self.lastBlockHash                      :str             = data["lastBlockHash"]
                 self.blockNumber                        :str             = data["blockNumber"]
-                self.stakeFee                           :str             = data["stakeFee"]
-                self.blockHash                          : str            = ""
+                self.blockHash                          :str            = ""
             
         def serialize(self) -> dict:
             return {
@@ -21,7 +20,6 @@ class Block(ISerializable):
                 "validatorVerificationSequence": self.validatorVerificationSequence,
                 "lastBlockHash": self.lastBlockHash,
                 "blockNumber": self.blockNumber,
-                "stakeFee": self.stakeFee,
                 "blockHash": self.blockHash,
                 "nextValidators": self.nextValidators
             }
