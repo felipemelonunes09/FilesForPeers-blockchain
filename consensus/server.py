@@ -27,6 +27,7 @@ class Server():
             
             if len(Server.blocks) != 0: 
                 lastBlock       = Server.blocks[-1]
+                Server.logger.info(f"Last block loaded --data: {lastBlock}")
                 lastHash        = lastBlock["__header"]["blockHash"]
                 lastBlockNumber = lastBlock["__header"]["blockNumber"]
                 
@@ -36,7 +37,6 @@ class Server():
                 "validatorVerificationSequence": "123456789",
                 "lastBlockHash": lastHash,
                 "blockNumber": lastBlockNumber + 1,
-                "stakeFee": 2,
                 "nextValidators": dict(),
             })
             
@@ -50,6 +50,19 @@ class Server():
             Server.logger.info(f"Staged block {block.serialize()}")
         
         def add_transaction(self, transaction: Transaction) -> None:
+            transaction.fee     = 1
+            transaction.cost    = 1
+            
+            if isinstance(transaction, UploadTransaction):
+                transaction.reward = 5
+            
+            if isinstance(transaction, DownloadTransaction):
+                transaction.reward = 0
+                transaction.cost = 2    
+                
+            if isinstance(transaction, HoldStakeTransaction):
+                transaction.reward = 5
+                
             transaction.confirm()
             self.__block.add_transaction(transaction)
             
@@ -72,6 +85,7 @@ class Server():
         def trigger_block_emission(self) -> None:
             ## another validation should be when there isnt yet validators or hold stake blocks of the next validation
             if (len(self.__block.get_transactions()) >= 2):
+                Server.logger.info(f"Block is with the necessary transactions holded --entries: {len(self.__block.get_transactions())}")
                 next_validators_pool = self.get_validators_pool()
                 next_validators_pool = sorted(next_validators_pool, key=lambda obj: obj.stake, reverse=True)
                 
@@ -88,6 +102,8 @@ class Server():
                     address = (Server.configuration["blockchain"]["data"]["ip"], Server.configuration["blockchain"]["data"]["port"])
                     thread = Server.EmitBlockToDataLayerThread(block=self.__block, sock=sock, address=address)
                     thread.start()
+                else:
+                    Server.logger.info(f"Block emission failed because there are not enought validator to validate the next block emission")
             else:
                 Server.logger.info(f"Block is not with the necessary transactions holded --entries: {len(self.__block.get_transactions())}")
     
