@@ -11,11 +11,14 @@ class Transaction(ISerializable):
         UPLOAD      = 2
         DOWNLOAD    = 3
 
-    def __init__(self, code: TransactionCode, peer_id: str) -> None:
+    def __init__(self, code: TransactionCode, peer_id: str, cost: int = 0, reward: int = 0, fee: int = 0) -> None:
         self.code                           = code
-        self.timestamp: datetime.datetime   = None
-        self.hash: str                      = ""
         self.peer_id                        = peer_id
+        self.cost                           = cost
+        self.reward                         = reward
+        self.fee                            = fee
+        self.hash: str                      = str()
+        self.timestamp: datetime.datetime   = None
         super().__init__()
         
     def generate_timestamp(self) -> None:
@@ -33,11 +36,16 @@ class Transaction(ISerializable):
 
     def serialize(self) -> dict[str, object]:
         return {
-            "transactionHash": self.hash,
-            "TransactionCode": self.code.value
+            "peerId"            : self.peer_id,
+            "transactionHash"   : self.hash,
+            "transactionCost"   : self.cost,
+            "transactionFee"    : self.fee,
+            "transactionReward" : self.reward,
+            "transactionCode"   : self.code.value,
         }
 
 class HoldStakeTransaction(Transaction):
+    
     def __init__(self, peer_id: str, stake: int, ip: str, port: int) -> None:
         self.stake = stake
         self.ip = ip
@@ -53,33 +61,27 @@ class HoldStakeTransaction(Transaction):
         } 
 
 class UploadTransaction(Transaction):
-    def __init__(self, peer_id: str, file_name: str, transaction_cost: int) -> None:
-        self.file_name = file_name
-        self.transaction_cost = transaction_cost
+    def __init__(self, peer_id: str, filename: str) -> None:
+        self.filename = filename
         super().__init__(Transaction.TransactionCode.UPLOAD, peer_id)
     
     def serialize(self) -> dict[str, object]:
         return {
             **super().serialize(),
-            "file_name": self.file_name,
-            "transaction_cost": self.transaction_cost
+            "filename": self.filename
         }
         
 class DownloadTransaction(Transaction):
-    def __init__(self, peer_id: str, file_name: str, receiver: str, cost: int, reward: int) -> None:
+    def __init__(self, peer_id: str, filename: str, receiver: str) -> None:
         super().__init__(Transaction.TransactionCode.DOWNLOAD, peer_id)
-        self.file_name = file_name
+        self.filename = filename
         self.receiver = receiver
-        self.cost = cost
-        self.reward = reward
         
     def serialize(self) -> dict[str, object]:
         return {
             **super().serialize(),
-            "file_name": self.file_name,
-            "receiver": self.receiver,
-            "cost": self.cost,
-            "reward": self.reward
+            "file_name": self.filename,
+            "receiver": self.receiver
         }
 
 def create_transaction(code: int, payload: dict) -> HoldStakeTransaction | UploadTransaction | DownloadTransaction:
