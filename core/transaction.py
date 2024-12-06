@@ -46,7 +46,7 @@ class Transaction(ISerializable):
 
 class HoldStakeTransaction(Transaction):
     
-    def __init__(self, peer_id: str, stake: int, ip: str, port: int) -> None:
+    def __init__(self, peer_id: str, stake: int, ip: str, port: int, **k) -> None:
         self.stake = stake
         self.ip = ip
         self.port = port
@@ -61,7 +61,7 @@ class HoldStakeTransaction(Transaction):
         } 
 
 class UploadTransaction(Transaction):
-    def __init__(self, peer_id: str, filename: str) -> None:
+    def __init__(self, peer_id: str, filename: str, **k) -> None:
         self.filename = filename
         super().__init__(Transaction.TransactionCode.UPLOAD, peer_id)
     
@@ -72,7 +72,7 @@ class UploadTransaction(Transaction):
         }
         
 class DownloadTransaction(Transaction):
-    def __init__(self, peer_id: str, filename: str, receiver: str) -> None:
+    def __init__(self, peer_id: str, filename: str, receiver: str, **k) -> None:
         super().__init__(Transaction.TransactionCode.DOWNLOAD, peer_id)
         self.filename = filename
         self.receiver = receiver
