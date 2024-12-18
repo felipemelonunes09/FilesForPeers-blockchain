@@ -1,6 +1,6 @@
 # files4Peers Blockchain
 
-## Inventives
+## Incentives
 
 ## Layers
 
