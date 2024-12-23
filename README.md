@@ -10,9 +10,10 @@ This project aims to utilize a decentralized network for peer-to-peer file shari
 
  - **BlockChain** (BlockChain Application) - This blockchain system is responsible for storing and recording new transactions, categorized as _Upload Blocks_, _Download Blocks_, or _Hold Stake Blocks_. It operates using a proof-of-stake mechanism for block validation, ensuring efficient and secure transaction processing within the network.
 
-## Incentives
 
 ## Layers
+
+## Incentives
 
 ## Solutions 
 
